@@ -3,8 +3,12 @@
  Integration between Taiga and Rocket.Chat: send Taiga activity notifications to Rocket.Chat channels.
  Inspired from [ GezimSejdiu/Rocket.Chat-Trello-Integration](https://github.com/GezimSejdiu/Rocket.Chat-Trello-Integration)
  
+ ![image](rocketchat-screenshot.png)
+ 
  ## About
  This script actually receives JSON as incoming webhook from Taiga, and creates a new JSON object by parsing and formatting it. The author is not a full-time Javascript developer, so feel free to send PR.
+ 
+ ![image](taiga-screenshot.png)
  
  
 ## Steps
