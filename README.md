@@ -32,7 +32,7 @@
    - Save the webhook by clicking on the **Save** icon/button.
    - Test the integration by clicking on the **Test Webhook** icon/button.
    
--- **Test your integration**
+- **Test your integration**
 To see what Taiga sent, click on **Show History** in Taiga webhooks settings page. It shows you the request, and response from Rocket.Chat. You should see `{"content": "{\"success\":true}"}` message if the webhook was successfully received by Rocket.Chat.
 
   
