@@ -77,7 +77,6 @@ class Script {
         var attachment_image = ""; // unused for now
         var attachment_thumb = ""; // unused for now
 
-
         /*
          * The metadata is a supplementary information which indicates what exactly was added/changed/deleted.
          * If something has changed, the "change" key will be present in the request content:
@@ -191,7 +190,7 @@ class Script {
                 // Created
                 if (request.content.action === 'create') {
                     message_emoji = ':new:';
-                    message_text = `${author_anchor} created a new milestone ${attachment_anchor}. ${itemMeta}`;
+                    message_text = `${author_anchor} added a new milestone ${attachment_anchor}. ${itemMeta}`;
                     message_text += `\nStart: ${data.estimated_start}, `
                     message_text += `\nFinish: ${data.estimated_finish}`;
                 }
@@ -209,15 +208,35 @@ class Script {
                 break;
 
 
+            case 'epic':
             case 'userstory':
-                attachment_title = data.subject;
+            case 'relateduserstory':
+            case 'task':
+            case 'issue':
+            case 'wikipage':
+                var contentType = request.content.type
+                    .replace('related', 'related ') //added trailing space
+                    .replace('userstory', 'user story')
+                    .replace('wikipage', 'wiki page');
+
+                attachment_title = data.subject || data.slug || data.user_story.subject || data.epic.subject;
                 attachment_link = data.permalink;
-                attachment_anchor = `[${attachment_title}](${attachment_link})`
+                attachment_anchor = attachment_title ? `[${attachment_title}](${attachment_link})` : '';
+
+                // If there is a mention of another "user_story" or "epic",
+                // We add the snippet " ...in User Story XYZ" or "in Epic XYZ" in the message
+                var user_story_or_epic_mention = ".";
+                if (data.user_story) {
+                    user_story_or_epic_mention = ` (User Story: [${data.user_story.subject}](${data.user_story.permalink}) ) `;
+                }
+                if (data.epic) {
+                    user_story_or_epic_mention += ` (Epic: [${data.epic.subject}](${data.epic.permalink}) ) `
+                }
 
                 // Created
                 if (request.content.action === 'create') {
                     message_emoji = ':new:';
-                    message_text = `${author_anchor} created a new User Story ${attachment_anchor}. ${itemMeta}`;
+                    message_text = `${author_anchor} added a new ${contentType} ${attachment_anchor} ${user_story_or_epic_mention}. ${itemMeta}`;
                 }
                 // updated
                 else if (request.content.change) {
@@ -228,10 +247,10 @@ class Script {
                         // When a comment is deleted, the delete_comment_date is set
                         if (request.content.change.delete_comment_date) {
                             message_emoji = ':x:';
-                            message_text = `${author_anchor} deleted their comment on User Story ${attachment_anchor}. ${itemMeta}`;
+                            message_text = `${author_anchor} deleted their comment on ${contentType}: ${attachment_anchor} ${user_story_or_epic_mention}. ${itemMeta}`;
                         } else {
                             message_emoji = ':speech_balloon:';
-                            message_text = `${author_anchor} commented on User Story ${attachment_anchor}. ${itemMeta}`;
+                            message_text = `${author_anchor} commented on ${contentType}: ${attachment_anchor} ${user_story_or_epic_mention}. ${itemMeta}`;
                         }
                         message_text += `\n> ${request.content.change.comment.split('\n', 1)[0]}`;
                     }
@@ -239,124 +258,15 @@ class Script {
                     // Comment is empty, that means something else was changed.
                     else {
                         message_emoji = ':triangular_flag_on_post:';
-                        message_text += `${author_anchor} updated the User Story ${attachment_anchor}. ${itemMeta}`;
+                        message_text += `${author_anchor} updated the ${contentType}: ${attachment_anchor} ${user_story_or_epic_mention}. ${itemMeta}`;
                     }
                 }
                 // Deleted
                 else {
                     message_emoji = ':x:';
-                    message_text += `${author_anchor} deleted a User Story ~${data.subject}~. ${itemMeta}`;
+                    message_text = `${author_anchor} deleted the ${contentType}: ~${attachment_title}~ ${user_story_or_epic_mention}. ${itemMeta}`;
                 }
 
-                break;
-
-
-            case 'task':
-                attachment_title = data.subject;
-                attachment_link = data.permalink;
-                attachment_anchor = `[${attachment_title}](${attachment_link})`;
-
-                // If this task belongs to a user story, "user_story" object will have a non-empty value.
-                // We add the snippet " ...in User Story XYZ" if the task belongs to a user story.
-                var user_story_mention = ".";
-                if (data.user_story) {
-                    user_story_mention = ` in User Story [${data.user_story.subject}](${data.user_story.permalink}).`;
-                }
-
-                // Created
-                if (request.content.action === 'create') {
-                    message_emoji = ':new:';
-                    message_text = `${author_anchor} created a new Task ${attachment_anchor} ${user_story_mention} ${itemMeta}`;
-                }
-                // updated
-                else if (request.content.change) {
-                    if (request.content.change.comment) {
-                        if (request.content.change.delete_comment_date) {
-                            message_emoji = ':x:';
-                            message_text = `${author_anchor} deleted their comment on the Task ${attachment_anchor} ${user_story_mention} ${itemMeta}`;
-                        } else {
-                            message_emoji = ':speech_balloon:';
-                            message_text = `${author_anchor} commented on the Task ${attachment_anchor} ${user_story_mention} ${itemMeta}`;
-                        }
-                        message_text += `\n> ${request.content.change.comment.split('\n', 1)[0]}`;
-                    } else {
-                        message_emoji = ':triangular_flag_on_post:';
-                        message_text = `${author_anchor} updated the Task ${attachment_anchor} ${user_story_mention}. ${itemMeta}`;
-                    }
-                }
-                // Deleted
-                else {
-                    message_emoji = ':x:';
-                    message_text += `${author_anchor} deleted a Task ~${data.subject}~ ${user_story_mention} ${itemMeta}`;
-                }
-                break;
-
-            case 'issue':
-                attachment_title = data.subject;
-                attachment_link = data.permalink;
-                attachment_anchor = `[${attachment_title}](${attachment_link})`
-
-                // Created
-                if (request.content.action === 'create') {
-                    message_emoji = ':new:';
-                    message_text = `${author_anchor} created a new Issue ${attachment_anchor} ${itemMeta}`;
-                }
-
-                // updated
-                else if (request.content.change) {
-                    if (request.content.change.comment) {
-                        if (request.content.change.delete_comment_date) {
-                            message_emoji = ':x:';
-                            message_text = `${author_anchor} deleted their comment on the Issue ${attachment_anchor}. ${itemMeta}`;
-                        } else {
-                            message_emoji = ':speech_balloon:';
-                            message_text = `${author_anchor} commented on the Issue ${attachment_anchor}. ${itemMeta}`;
-                        }
-                        message_text += `\n> ${request.content.change.comment.split('\n', 1)[0]}`;
-                    } else {
-                        message_emoji = ':triangular_flag_on_post:';
-                        message_text = `${author_anchor} updated the Issue ${attachment_anchor}. ${itemMeta}`;
-                    }
-                }
-                // Deleted
-                else {
-                    message_emoji = ':x:';
-                    message_text += `${author_anchor} deleted the Issue ~${data.subject}~. ${itemMeta}`;
-                }
-                break;
-
-            case 'wikipage':
-                attachment_title = data.slug;
-                attachment_link = data.permalink;
-                attachment_anchor = `[${attachment_title}](${attachment_link})`
-
-                // Created
-                if (request.content.action === 'create') {
-                    message_emoji = ':new:';
-                    message_text = `${author_anchor} created a new page ${attachment_anchor} in Wiki`;
-                }
-
-                // updated
-                else if (request.content.change) {
-                    if (request.content.change.comment) {
-                        if (request.content.change.delete_comment_date) {
-                            message_emoji = ':x:';
-                            message_text = `${author_anchor} deleted their comment on the wiki page ${attachment_anchor} ${itemMeta}`;
-                        } else {
-                            message_emoji = ':speech_balloon:';
-                            message_text = `${author_anchor} commented on the wiki page ${attachment_anchor}. ${itemMeta}`;
-                        }
-                        message_text += `\n> ${request.content.change.comment.split('\n', 1)[0]}`;
-                    } else {
-                        message_emoji = ':triangular_flag_on_post:';
-                        message_text = `${author_anchor} made changes to the Wiki page ${attachment_anchor}`;
-                    }
-                }
-                // Deleted
-                else {
-                    message_emoji = ':x:';
-                    message_text += `${author_anchor} deleted the page ~${data.slug}~ from the Wiki.`;
-                }
                 break;
 
             default:
